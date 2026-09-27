@@ -1,103 +1,243 @@
-# RFID Access Control System (Arduino UNO + RC522)
+# Arduino RFID Access Control System
 
-A complete **RFID-based access control system** using Arduino UNO, MFRC522 RFID reader, LEDs, buzzer, and a servo-based lock mechanism.  
-Perfect for beginners who want to explore **RFID, SPI communication, and embedded security systems**.
+**An embedded access-control prototype using Arduino UNO, an MFRC522 RFID reader, servo-actuated locking, visual indicators, and buzzer feedback.**
 
----
-
-## 🔧 Hardware Components
-
-| Component         | Purpose |
-|-------------------|---------|
-| Arduino UNO       | Main controller |
-| RC522 RFID Reader | Reads card UID |
-| Green LED         | Access Granted indicator |
-| Red LED           | Access Denied indicator |
-| Buzzer            | Audible feedback |
-| Servo Motor       | Lock/unlock mechanism |
-| Jumper Wires      | Connections |
-| Breadboard        | Assembly |
+Built to demonstrate **SPI-based RFID communication, UID validation, actuator control, and simple embedded access logic**.
 
 ---
 
-## 🧰 Wiring Diagram
+## Overview
 
-### RFID → Arduino UNO
+The system reads an RFID card or tag using the **MFRC522** module and compares its UID against an authorised UID stored in the Arduino firmware.
 
-| RFID Pin | Arduino Pin |
-|----------|-------------|
-| SDA      | 10          |
-| SCK      | 13 |
-| MOSI     | 11 |
-| MISO     | 12 |
-| RST      | 9 |
-| 3.3V     | 3.3V |
-| GND      | GND |
+Depending on the result:
 
-### LEDs
+- an authorised card triggers the **green LED**, a short confirmation tone, and the servo unlock sequence;
+- an unauthorised card triggers the **red LED** and repeated warning tones.
 
-- Green LED → pin **6** (via 220Ω resistor)  
-- Red LED → pin **7** (via 220Ω resistor)
-
-### Buzzer
-
-- + → pin **8**  
-- – → GND
-
-### Servo
-
-- Signal → pin **3**  
-- VCC → 5V  
-- GND → GND
+After a successful unlock, the servo automatically returns to the locked position.
 
 ---
 
-## 🚀 Features
+## System Flow
 
-- Reads RFID card UID  
-- Checks against allowed UID list  
-- **Access Granted** → Green LED + Servo unlock  
-- **Access Denied** → Red LED + Buzzer  
-- Serial monitor output  
-- Beginner-friendly and easy to expand
-
----
-
-## ▶️ Setup & Run
-
-1. Install required Arduino libraries:  
-   - `MFRC522`  
-   - `SPI`  
-   - `Servo`  
-
-2. Upload `rfid_access_system.ino` to your Arduino UNO.
-
-3. Open **Serial Monitor → 9600 baud**.
-
-4. Tap an RFID card:
-   - Green LED + Servo unlock → **Access Granted**  
-   - Red LED + Buzzer → **Access Denied**
-
----
-
-## 📸 Media
-
-Store images and demo GIF in the `/images` folder:
-
-- `setup.jpg` → Breadboard setup  
-- `wiring.jpg` → Wiring close-up  
-- `demo.gif` → Demo of card tapping
+```text
+RFID card / tag
+      │
+      ▼
+MFRC522 reader
+      │  SPI
+      ▼
+Arduino UNO
+      │
+      ▼
+Read card UID
+      │
+      ▼
+Compare with authorised UID
+      │
+   ┌──┴───────────────┐
+   ▼                  ▼
+Match              No match
+   │                  │
+   ▼                  ▼
+Green LED          Red LED
+Short tone         Warning tones
+Servo unlock
+   │
+   ▼
+1 second delay
+   │
+   ▼
+Servo returns to locked position
+```
 
 ---
 
-## 🛠 Troubleshooting
+## Hardware
 
-- **RFID not reading** → Ensure 3.3V power, correct SPI pins, card near antenna  
-- **Buzzer too quiet** → Use active buzzer or laptop speaker via Python script  
-- **Servo vibrating** → Use separate 5V power if needed
+| Component | Role |
+| --- | --- |
+| Arduino UNO | Main controller |
+| MFRC522 / RC522 RFID reader | Reads RFID card UID |
+| Servo motor | Simulates lock / unlock mechanism |
+| Green LED | Access-granted indicator |
+| Red LED | Access-denied indicator |
+| Buzzer | Audible status feedback |
+| Breadboard / jumper wires | Prototype connections |
 
 ---
 
-## ✨ Author
+## Pin Mapping
 
-**Leroy Mangwarara**
+### MFRC522 → Arduino UNO
+
+| MFRC522 Pin | Arduino UNO |
+| --- | ---: |
+| SDA / SS | 10 |
+| SCK | 13 |
+| MOSI | 11 |
+| MISO | 12 |
+| RST | 9 |
+| 3.3V | 3.3V |
+| GND | GND |
+
+### Outputs
+
+| Component | Arduino Pin |
+| --- | ---: |
+| Servo signal | 3 |
+| Green LED | 6 |
+| Red LED | 7 |
+| Buzzer | 8 |
+
+> The MFRC522 operates at **3.3 V**. It should not be powered from the Arduino 5 V pin.
+
+---
+
+## Firmware Logic
+
+The main loop:
+
+1. waits for a new RFID card;
+2. reads the card serial number;
+3. converts the UID to uppercase hexadecimal text;
+4. compares it with the configured authorised UID;
+5. executes either the access-granted or access-denied sequence;
+6. halts the current card session and waits for the next scan.
+
+### Access granted
+
+```text
+Green LED ON
+      ↓
+Short confirmation beep
+      ↓
+Servo moves to unlock position
+      ↓
+Wait 1 second
+      ↓
+Servo returns to lock position
+```
+
+### Access denied
+
+The red LED flashes while the buzzer produces repeated low-frequency warning tones.
+
+---
+
+## Servo Positions
+
+The firmware currently uses:
+
+```cpp
+lockPos = 15;
+unlockPos = 75;
+```
+
+These values can be adjusted to match the physical orientation of the servo and lock mechanism.
+
+---
+
+## Configure an Authorised Card
+
+The authorised RFID UID is configured in:
+
+```cpp
+String allowedUID = "27F1E600";
+```
+
+To use a different card:
+
+1. upload the sketch;
+2. open the Serial Monitor at **9600 baud**;
+3. scan the card;
+4. copy the printed UID;
+5. replace the configured `allowedUID`;
+6. upload the firmware again.
+
+---
+
+## Required Arduino Libraries
+
+The sketch uses:
+
+- `SPI` — included with Arduino;
+- `MFRC522`;
+- `Servo`.
+
+---
+
+## Run the Project
+
+1. Connect the MFRC522, LEDs, buzzer, and servo according to the pin mapping.
+2. Install the `MFRC522` library from the Arduino Library Manager.
+3. Open `rfid_access_system.ino`.
+4. Select the correct Arduino UNO board and port.
+5. Upload the sketch.
+6. Open Serial Monitor at **9600 baud**.
+7. Scan an RFID card or tag.
+
+---
+
+## Repository Structure
+
+```text
+.
+├── rfid_access_system.ino
+├── .gitignore
+└── README.md
+```
+
+---
+
+## What This Project Demonstrates
+
+- Arduino embedded programming;
+- SPI communication;
+- MFRC522 RFID integration;
+- UID parsing and comparison;
+- servo actuator control;
+- LED and buzzer feedback;
+- simple state-based access logic;
+- hardware prototyping.
+
+---
+
+## Security Scope
+
+This is an **educational access-control prototype**, not a production security system.
+
+The current design authorises users using only the RFID card UID. Many low-cost RFID cards expose identifiers that can be read or cloned, so UID matching alone should not be treated as strong authentication.
+
+A production system would require additional measures such as:
+
+- stronger card authentication;
+- secure credential storage;
+- anti-cloning controls;
+- event logging;
+- tamper detection;
+- access revocation;
+- backend identity management.
+
+---
+
+## Possible Extensions
+
+- support multiple authorised cards;
+- store authorised credentials in EEPROM or an external database;
+- add an LCD/OLED display;
+- record access events with timestamps;
+- add keypad or biometric second-factor verification;
+- connect the system to Wi-Fi or MQTT;
+- add administrator enrolment / card-revocation workflows.
+
+---
+
+## Author
+
+**Leroy Nyasha Mangwarara**
+
+Computer Science · Software Engineering · Embedded Systems · IoT
+
+[GitHub](https://github.com/Leroy-laboe) · [LinkedIn](https://www.linkedin.com/in/leroy-nyasha-mangwarara-86185a302/) · [Email](mailto:mangwararaleroy@gmail.com)
